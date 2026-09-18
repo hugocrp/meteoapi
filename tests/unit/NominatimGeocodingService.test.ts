@@ -15,12 +15,12 @@ describe("NominatimGeocodingService", () => {
 
   it("construit l'URL Nominatim attendue avec l'adresse encodée", async () => {
     const httpClient = new FakeHttpClient([{ lat: "0", lon: "0" }]);
-    const geocodingService = new NominatimGeocodingService(httpClient, "https://nominatim.example/search");
+    const geocodingService = new NominatimGeocodingService(httpClient);
 
     await geocodingService.geocode("Saint-Étienne");
 
     expect(httpClient.requestedUrls[0]).toBe(
-      "https://nominatim.example/search?q=Saint-%C3%89tienne&format=json&limit=1",
+      "https://nominatim.openstreetmap.org/search?q=Saint-%C3%89tienne&format=json&limit=1",
     );
   });
 

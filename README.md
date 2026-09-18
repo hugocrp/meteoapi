@@ -10,12 +10,31 @@ lieu, en enchaînant deux services externes :
 
 ```bash
 npm install
+cp .env.example .env   # si pas déjà fait
 npm run dev
 ```
 
 ```
 GET http://localhost:3000/forecast?address=Alès
 ```
+
+## Configuration (`.env`)
+
+Toutes les variables d'environnement sont lues à un seul endroit,
+[`src/config/env.ts`](src/config/env.ts), avec leurs valeurs par défaut
+(`ENV_DEFAULTS`) — c'est la référence pour savoir ce qu'on peut mettre dans
+`.env`. `npm run dev`/`npm run start` le chargent via le flag natif Node
+`--env-file-if-exists` (aucune dépendance `dotenv`).
+
+| Variable            | Défaut           | Rôle                                             |
+|----------------------|------------------|---------------------------------------------------|
+| `PORT`               | `3000`           | Port d'écoute HTTP                                 |
+| `HTTP_USER_AGENT`    | placeholder       | En-tête `User-Agent` envoyé à Nominatim/BAN/Open-Meteo/MET Norway (MET Norway et Nominatim le rejettent avec 403 sans contact identifiable) |
+| `GEOCODING_PROVIDER` | `ban`            | `ban` \| `nominatim`                               |
+| `WEATHER_PROVIDER`   | `open-meteo`     | `open-meteo` \| `met-norway`                       |
+
+Une variable d'environnement réelle (`GEOCODING_PROVIDER=nominatim npm run start`)
+prend toujours le dessus sur `.env`, sans qu'il faille l'éditer.
 
 ## Tests
 
@@ -34,28 +53,32 @@ concrètes — cf. cours J1 sur le couplage, l'IoC et la DI.
 ```
 src/
   domain/types.ts                 Types métier + erreurs (Coordinates, Forecast, ...)
+  config/
+    env.ts                        Seul endroit qui lit process.env, avec défauts
+    providers.ts                  Registre provider -> classe + validation
   di/tokens.ts                    Jetons d'injection tsyringe (Symbol) pour
-                                   les dépendances typées par interface
+                                   les dépendances typées par interface, et
+                                   pour la config injectée (HTTP_USER_AGENT)
   http/
     HttpClient.ts                 Interface : abstraction du transport HTTP
     FetchHttpClient.ts            Seule implémentation concrète (fetch), @injectable()
   services/
-    GeocodingService.ts           Interface géocodage
-    NominatimGeocodingService.ts  Implémentation Nominatim, @injectable()
-                                   (dépend de HttpClient via @inject(HTTP_CLIENT))
-    WeatherService.ts             Interface météo
-    OpenMeteoWeatherService.ts    Implémentation Open-Meteo, @injectable()
-                                   (dépend de HttpClient via @inject(HTTP_CLIENT))
+    GeocodingService.ts / WeatherService.ts   Interfaces (abstractions)
+    NominatimGeocodingService.ts / BanGeocodingService.ts       Implémentations géocodage
+    OpenMeteoWeatherService.ts / MetNorwayWeatherService.ts     Implémentations météo
     ForecastService.ts            Couche métier, @injectable() : orchestre
                                    géocodage + météo (ne dépend que des deux
                                    interfaces ci-dessus, injectées par jeton)
   controllers/forecastController.ts  Handler Express (dépend de ForecastService)
   app.ts                          Assemble les routes Express à partir d'un
                                    ForecastService déjà construit
-  server.ts                       Composition root : enregistre chaque jeton
-                                   auprès de son implémentation dans le
-                                   conteneur tsyringe, puis résout tout le
-                                   graphe en un `container.resolve(...)`
+  server.ts                       Composition root : lit la config, enregistre
+                                   chaque jeton auprès de son implémentation
+                                   (via le registre de config/providers.ts)
+                                   dans le conteneur tsyringe, puis résout tout
+                                   le graphe en un `container.resolve(...)` —
+                                   ne référence plus aucune classe d'adaptateur
+                                   par son nom
 ```
 
 ### IoC/DI avec tsyringe
