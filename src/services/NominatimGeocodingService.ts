@@ -21,13 +21,10 @@ const NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org/search";
  */
 @injectable()
 export class NominatimGeocodingService implements GeocodingService {
-  constructor(
-    @inject(HTTP_CLIENT) private readonly httpClient: HttpClient,
-    private readonly baseUrl: string = NOMINATIM_BASE_URL,
-  ) {}
+  constructor(@inject(HTTP_CLIENT) private readonly httpClient: HttpClient) {}
 
   async geocode(address: string): Promise<Coordinates | null> {
-    const url = `${this.baseUrl}?q=${encodeURIComponent(address)}&format=json&limit=1`;
+    const url = `${NOMINATIM_BASE_URL}?q=${encodeURIComponent(address)}&format=json&limit=1`;
 
     let results: NominatimResult[];
     try {

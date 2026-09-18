@@ -15,3 +15,4 @@ import type { WeatherService } from "../services/WeatherService.js";
 export const HTTP_CLIENT: InjectionToken<HttpClient> = Symbol("HttpClient");
 export const GEOCODING_SERVICE: InjectionToken<GeocodingService> = Symbol("GeocodingService");
 export const WEATHER_SERVICE: InjectionToken<WeatherService> = Symbol("WeatherService");
+export const HTTP_USER_AGENT: InjectionToken<string> = Symbol("HttpUserAgent");

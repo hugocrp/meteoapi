@@ -36,16 +36,12 @@ export const WEATHER_VARIABLES: WeatherVariable[] = [
  */
 @injectable()
 export class OpenMeteoWeatherService implements WeatherService {
-  constructor(
-    @inject(HTTP_CLIENT) private readonly httpClient: HttpClient,
-    private readonly variables: WeatherVariable[] = WEATHER_VARIABLES,
-    private readonly baseUrl: string = OPEN_METEO_BASE_URL,
-  ) {}
+  constructor(@inject(HTTP_CLIENT) private readonly httpClient: HttpClient) {}
 
   async getHourlyForecast(coordinates: Coordinates): Promise<HourlyForecast> {
     const url =
-      `${this.baseUrl}?latitude=${coordinates.latitude}` +
-      `&longitude=${coordinates.longitude}&hourly=${this.variables.join(",")}`;
+      `${OPEN_METEO_BASE_URL}?latitude=${coordinates.latitude}` +
+      `&longitude=${coordinates.longitude}&hourly=${WEATHER_VARIABLES.join(",")}`;
 
     let response: OpenMeteoResponse;
     try {

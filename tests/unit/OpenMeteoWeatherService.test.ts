@@ -12,10 +12,7 @@ describe("OpenMeteoWeatherService", () => {
         shortwave_radiation: [0, 0],
       },
     });
-    const weatherService = new OpenMeteoWeatherService(httpClient, [
-      "temperature_2m",
-      "shortwave_radiation",
-    ]);
+    const weatherService = new OpenMeteoWeatherService(httpClient);
 
     const forecast = await weatherService.getHourlyForecast({ latitude: 48.85, longitude: 2.35 });
 
@@ -28,30 +25,16 @@ describe("OpenMeteoWeatherService", () => {
     });
   });
 
-  it("inclut toutes les variables configurées dans l'URL, quel que soit leur nombre", async () => {
-    const httpClient = new FakeHttpClient({
-      hourly: { time: [], temperature_2m: [], precipitation: [] },
-    });
-    const weatherService = new OpenMeteoWeatherService(
-      httpClient,
-      ["temperature_2m", "precipitation"],
-      "https://open-meteo.example/forecast",
-    );
+  it("demande la liste de variables par défaut dans l'URL", async () => {
+    const httpClient = new FakeHttpClient({ hourly: { time: [] } });
+    const weatherService = new OpenMeteoWeatherService(httpClient);
 
     await weatherService.getHourlyForecast({ latitude: 48.85, longitude: 2.35 });
 
     expect(httpClient.requestedUrls[0]).toBe(
-      "https://open-meteo.example/forecast?latitude=48.85&longitude=2.35&hourly=temperature_2m,precipitation",
+      "https://api.open-meteo.com/v1/forecast?latitude=48.85&longitude=2.35" +
+        "&hourly=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,shortwave_radiation",
     );
-  });
-
-  it("utilise la liste de variables par défaut si aucune n'est fournie", async () => {
-    const httpClient = new FakeHttpClient({ hourly: { time: [] } });
-    const weatherService = new OpenMeteoWeatherService(httpClient, undefined, "https://open-meteo.example/forecast");
-
-    await weatherService.getHourlyForecast({ latitude: 0, longitude: 0 });
-
-    expect(httpClient.requestedUrls[0]).toContain("hourly=temperature_2m,relative_humidity_2m,");
   });
 
   it("enveloppe une erreur réseau dans UpstreamServiceError", async () => {
