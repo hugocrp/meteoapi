@@ -51,7 +51,7 @@ export class OpenMeteoWeatherService implements WeatherService {
     const { time, ...variableValues } = response.hourly;
 
     return {
-      time: time as string[],
+      time: (time as string[]).map((value) => `${value}:00Z`),
       variables: variableValues as Partial<Record<WeatherVariable, number[]>>,
     };
   }

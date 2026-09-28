@@ -34,6 +34,17 @@ export function describeWeatherServiceContract(name: string, fixtures: WeatherSe
       }
     });
 
+    it("horodatages au format ISO 8601 UTC", async () => {
+      const httpClient = new FakeHttpClient(fixtures.sampleResponse);
+      const service = fixtures.createService(httpClient);
+
+      const forecast = await service.getHourlyForecast(fixtures.coordinates);
+
+      for (const time of forecast.time) {
+        expect(time).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+      }
+    });
+
     it("réponse vide -> prévision vide, sans erreur", async () => {
       const httpClient = new FakeHttpClient(fixtures.emptyResponse);
       const service = fixtures.createService(httpClient);

@@ -17,7 +17,7 @@ describe("OpenMeteoWeatherService", () => {
     const forecast = await weatherService.getHourlyForecast({ latitude: 48.85, longitude: 2.35 });
 
     expect(forecast).toEqual({
-      time: ["2026-09-18T00:00", "2026-09-18T01:00"],
+      time: ["2026-09-18T00:00:00Z", "2026-09-18T01:00:00Z"],
       variables: {
         temperature_2m: [18.4, 17.9],
         shortwave_radiation: [0, 0],

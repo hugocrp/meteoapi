@@ -16,6 +16,20 @@ npm run dev
 
 ```
 GET http://localhost:3000/forecast?address=Alès
+GET http://localhost:3000/forecast?address=Alès&demo=true
+```
+
+Avec `demo=true`, l'API renvoie des données simulées et n'appelle aucun
+service externe. La réponse a toujours la même structure, quel que soit le
+fournisseur actif ou le mode démo :
+
+```json
+{
+  "address": "Alès",
+  "latitude": 44.1279,
+  "longitude": 4.0817,
+  "hourly": [{ "time": "2025-06-10T14:00:00Z", "temperatureCelsius": 24.3 }]
+}
 ```
 
 ## Configuration (`.env`)
@@ -66,12 +80,19 @@ src/
     GeocodingService.ts / WeatherService.ts   Interfaces (abstractions)
     NominatimGeocodingService.ts / BanGeocodingService.ts       Implémentations géocodage
     OpenMeteoWeatherService.ts / MetNorwayWeatherService.ts     Implémentations météo
+    CachingGeocodingService.ts    Décorateur de GeocodingService : cache par adresse
+    DemoGeocodingService.ts / DemoWeatherService.ts   Implémentations simulées (mode démo)
     ForecastService.ts            Couche métier, @injectable() : orchestre
                                    géocodage + météo (ne dépend que des deux
                                    interfaces ci-dessus, injectées par jeton)
-  controllers/forecastController.ts  Handler Express (dépend de ForecastService)
-  app.ts                          Assemble les routes Express à partir d'un
-                                   ForecastService déjà construit
+  cache/
+    Cache.ts                      Interface : abstraction du cache (async, clé/valeur)
+    InMemoryCache.ts              Implémentation en mémoire (état d'instance, pas de static)
+  controllers/
+    forecastController.ts         Handler Express : choisit le service réel ou de démo
+    forecastResponse.ts           Présentateur : modèle du domaine -> format de sortie unifié
+  app.ts                          Assemble les routes Express à partir de
+                                   ForecastService déjà construits (réel et démo)
   server.ts                       Composition root : lit la config, enregistre
                                    chaque jeton auprès de son implémentation
                                    (via le registre de config/providers.ts)
@@ -123,6 +144,28 @@ la BAN, `timeseries` de MET Norway) restent privés à leur adaptateur : les
 tests de contrat vérifient que seuls `latitude`/`longitude` et les variables
 du domaine sortent des adaptateurs.
 
+### Mode démo, cache et format de sortie (TP3)
+
+Trois besoins transverses, résolus avec des patrons classiques plutôt qu'en
+modifiant les services existants :
+
+- **Mode démo (Strategy)** : `DemoGeocodingService` et `DemoWeatherService`
+  implémentent les mêmes interfaces que les vrais adaptateurs. Un conteneur
+  enfant tsyringe surcharge les deux jetons et fournit un second
+  `ForecastService` qui, par construction, ne peut appeler aucun service
+  externe. Le contrôleur choisit l'un ou l'autre selon `demo=true`.
+- **Cache (Decorator)** : `CachingGeocodingService` enveloppe le géocodeur
+  actif (jeton `UNCACHED_GEOCODING_SERVICE`) et s'appuie sur l'abstraction
+  `Cache`. L'implémentation (`InMemoryCache`) est un singleton du conteneur,
+  sans `static` : la remplacer (TTL, LRU, Redis...) = une nouvelle classe
+  `Cache` et une ligne dans `server.ts`. Les erreurs ne sont pas mises en
+  cache, les adresses introuvables le sont.
+- **Format unifié (Adapter/Presenter)** : chaque adaptateur normalise déjà ses
+  données vers le modèle du domaine (horodatages en ISO 8601 UTC compris) ;
+  `toForecastResponse` est ensuite le seul endroit qui décide de la forme
+  publique de la réponse. Le contrat de l'API est ainsi découplé du modèle
+  interne et identique pour tous les fournisseurs.
+
 ### Comment ça respecte couplage faible / IoC / DI
 
 - **Aucune classe métier ne fait `new` sur une dépendance concrète.** Chaque
@@ -155,4 +198,7 @@ du domaine sortent des adaptateurs.
   contrôleur → `ForecastService`, avec seulement la frontière externe
   (Nominatim/Open-Meteo) remplacée par des fakes injectés dans `createApp`.
   Ça vérifie le câblage réel de l'application, pas seulement chaque brique
-  isolément.
+  isolément. `unifiedFormat.e2e.test.ts` vérifie, pour chaque combinaison de
+  fournisseurs du registre et pour le mode démo, que la structure de la
+  réponse est identique, et que deux appels sur la même adresse ne
+  déclenchent qu'un seul appel de géocodage.

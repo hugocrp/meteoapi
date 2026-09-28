@@ -1,9 +1,9 @@
 import type { Request, Response } from "express";
 import { AddressNotFoundError, UpstreamServiceError } from "../domain/types.js";
 import type { ForecastService } from "../services/ForecastService.js";
+import { toForecastResponse } from "./forecastResponse.js";
 
-
-export function createForecastHandler(forecastService: ForecastService) {
+export function createForecastHandler(forecastService: ForecastService, demoForecastService: ForecastService) {
   return async (req: Request, res: Response): Promise<void> => {
     const address = req.query.address;
 
@@ -13,8 +13,9 @@ export function createForecastHandler(forecastService: ForecastService) {
     }
 
     try {
-      const forecast = await forecastService.getForecastForAddress(address);
-      res.status(200).json(forecast);
+      const service = req.query.demo === "true" ? demoForecastService : forecastService;
+      const forecast = await service.getForecastForAddress(address);
+      res.status(200).json(toForecastResponse(forecast));
     } catch (error) {
       if (error instanceof AddressNotFoundError) {
         res.status(404).json({ error: error.message });
