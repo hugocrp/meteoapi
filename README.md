@@ -3,8 +3,8 @@
 API qui reçoit une adresse postale en `GET` et renvoie les prévisions météo du
 lieu, en enchaînant deux services externes :
 
-- **Géocodage** : [Nominatim](https://nominatim.openstreetmap.org) (adresse → latitude/longitude)
-- **Météo** : [Open-Meteo](https://api.open-meteo.com) (latitude/longitude → prévisions horaires)
+- **Géocodage** : [BAN](https://adresse.data.gouv.fr) (défaut, souverain) ou [Nominatim](https://nominatim.openstreetmap.org) (adresse → latitude/longitude)
+- **Météo** : [Open-Meteo](https://api.open-meteo.com) (défaut) ou [MET Norway](https://api.met.no) (latitude/longitude → prévisions horaires)
 
 ## Lancer le projet
 
@@ -30,10 +30,10 @@ Toutes les variables d'environnement sont lues à un seul endroit,
 |----------------------|--------------|----------------------------------------------------------------------|
 | `PORT`               | `3000`       | Port d'écoute HTTP                                                   |
 | `HTTP_USER_AGENT`    | voir `env.ts`| En-tête `User-Agent` envoyé aux services externes (rejet 403 sans contact identifiable) |
-| `GEOCODING_PROVIDER` | `nominatim`  | Fournisseur de géocodage (clés de `GEOCODING_PROVIDER_REGISTRY`)     |
-| `WEATHER_PROVIDER`   | `open-meteo` | Fournisseur météo (clés de `WEATHER_PROVIDER_REGISTRY`)              |
+| `GEOCODING_PROVIDER` | `ban`        | `ban` \| `nominatim` (clés de `GEOCODING_PROVIDER_REGISTRY`)          |
+| `WEATHER_PROVIDER`   | `open-meteo` | `open-meteo` \| `met-norway` (clés de `WEATHER_PROVIDER_REGISTRY`)   |
 
-Une variable d'environnement réelle (`WEATHER_PROVIDER=open-meteo npm run start`)
+Une variable d'environnement réelle (`WEATHER_PROVIDER=met-norway npm run start`)
 prend toujours le dessus sur `.env`, sans qu'il faille l'éditer.
 
 ## Tests
@@ -64,8 +64,8 @@ src/
     FetchHttpClient.ts            Seule implémentation concrète (fetch), @injectable()
   services/
     GeocodingService.ts / WeatherService.ts   Interfaces (abstractions)
-    NominatimGeocodingService.ts  Implémentation géocodage
-    OpenMeteoWeatherService.ts    Implémentation météo
+    NominatimGeocodingService.ts / BanGeocodingService.ts       Implémentations géocodage
+    OpenMeteoWeatherService.ts / MetNorwayWeatherService.ts     Implémentations météo
     ForecastService.ts            Couche métier, @injectable() : orchestre
                                    géocodage + météo (ne dépend que des deux
                                    interfaces ci-dessus, injectées par jeton)
@@ -110,6 +110,19 @@ Le choix du fournisseur se fait par variable d'environnement, via un registre
 fournisseur = un nouveau fichier adaptateur + une ligne dans le registre :
 `server.ts`, `ForecastService` et le contrôleur ne changent pas.
 
+### Coût du changement : du TP1 au TP2
+
+Passer à un géocodeur souverain et à un second fournisseur météo n'a demandé
+que des ajouts : deux nouveaux adaptateurs (`BanGeocodingService`,
+`MetNorwayWeatherService`), leurs tests, deux lignes dans le registre de
+`config/providers.ts` et le défaut de `GEOCODING_PROVIDER`. `server.ts`,
+`ForecastService`, le contrôleur et les types du domaine n'ont pas bougé.
+
+Les objets propres à chaque API (DTO, noms de champs, ordre `[lon, lat]` de
+la BAN, `timeseries` de MET Norway) restent privés à leur adaptateur : les
+tests de contrat vérifient que seuls `latitude`/`longitude` et les variables
+du domaine sortent des adaptateurs.
+
 ### Comment ça respecte couplage faible / IoC / DI
 
 - **Aucune classe métier ne fait `new` sur une dépendance concrète.** Chaque
@@ -134,6 +147,10 @@ fournisseur = un nouveau fichier adaptateur + une ligne dans le registre :
 - **Unitaires** (`tests/unit`) : chaque classe est testée isolément avec ses
   dépendances remplacées par des fakes (`FakeHttpClient`,
   `FakeGeocodingService`, `FakeWeatherService`).
+- **Contrat** (`tests/contract`) : une suite unique par abstraction
+  (`GeocodingService`, `WeatherService`), exécutée contre chaque
+  implémentation avec des réponses HTTP simulées : adresse valide, adresse
+  introuvable, réponse vide, caractères accentués.
 - **End-to-end** (`tests/e2e`) : une vraie requête HTTP traverse Express →
   contrôleur → `ForecastService`, avec seulement la frontière externe
   (Nominatim/Open-Meteo) remplacée par des fakes injectés dans `createApp`.

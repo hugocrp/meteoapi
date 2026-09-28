@@ -7,8 +7,8 @@ export interface EnvConfig {
 
 export const ENV_DEFAULTS = {
   PORT: "3000",
-  HTTP_USER_AGENT: "TP1-MeteoApi/1.0 hugo.crepin@etu.mines-ales.fr",
-  GEOCODING_PROVIDER: "nominatim",
+  HTTP_USER_AGENT: "TP2-MeteoApi/1.0 hugo.crepin@etu.mines-ales.fr",
+  GEOCODING_PROVIDER: "ban",
   WEATHER_PROVIDER: "open-meteo",
 } as const;
 
