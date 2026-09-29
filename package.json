@@ -12,8 +12,12 @@
     "test:watch": "vitest",
     "test:unit": "vitest run tests/unit",
     "test:e2e": "vitest run tests/e2e",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit && tsc --noEmit -p tools/tsconfig.json",
+    "licenses:scan": "tsx tools/licenses/scan.ts",
+    "licenses:audit": "tsx tools/licenses/cli.ts",
+    "licenses": "npm run licenses:scan && npm run licenses:audit"
   },
+  "private": true,
   "license": "UNLICENSED",
   "dependencies": {
     "express": "^4.21.2",

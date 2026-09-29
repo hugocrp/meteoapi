@@ -58,6 +58,27 @@ npm run test:unit
 npm run test:e2e
 ```
 
+## Conformité des licences (TP4)
+
+Toutes les dépendances, transitives comprises, sont auditées à chaque build.
+
+```bash
+npm run licenses       # scan (license-checker) + audit ; code de sortie 1 en cas de violation
+```
+
+- [`licenses/licenses.json`](licenses/licenses.json) : scan brut de tout l'arbre
+  (et `licenses.production.json` pour les seules dépendances de production).
+- [`licenses/licenses.md`](licenses/licenses.md) : classification de chaque paquet
+  (permissive, copyleft, propriétaire, non identifiée), générée.
+- [`licenses/decisions.md`](licenses/decisions.md) : politique, fiches de décision
+  et preuve du garde-fou (ajout puis retrait d'un paquet GPL).
+- [`licenses/policy.json`](licenses/policy.json) : liste blanche et familles.
+- `.github/workflows/ci.yml` : la CI lance `lint`, `build`, `test`, puis
+  l'audit des licences dans un job séparé.
+
+Le code de l'audit est dans `tools/licenses/` (hors `src/`, donc absent de
+l'artefact déployé).
+
 ## Architecture
 
 Architecture en couches, chaque couche ne dépendant que d'**abstractions**
